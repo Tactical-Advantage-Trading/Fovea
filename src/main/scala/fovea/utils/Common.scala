@@ -60,11 +60,10 @@ object Common:
   // Represents a series of feature observations and a followup value
   case class SerialObservations(features: Array[Features], value: Double)
 
-  def featuresToNDArray(features: List[SerialObservations], targetShape: Shape, manager: NDManager, logger: Logger): (NDArray, NDArray) =
+  def featuresToNDArray(features: List[SerialObservations], targetShape: Shape, manager: NDManager): (NDArray, NDArray) =
     val (splitFeatures, splitValues) = Random.shuffle(features).map(container => container.features.flatten -> container.value).unzip
     val finalFeatures = manager.create(splitFeatures.toArray).reshape(targetShape).toType(DataType.FLOAT32, false)
     val finalValues = manager.create(splitValues.toArray).toType(DataType.FLOAT32, false)
-    logger.info(splitValues.groupBy(identity).view.mapValues(_.size).toMap.toString)
     (finalFeatures, finalValues)
 
   def logBase(x: Double, base: Int): Double =
