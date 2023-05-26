@@ -81,12 +81,16 @@ object Statistics:
   // An efficient running sum that does not need to recompute history on new data
 
   def emptyRunningSum(period: Int): RunningSum =
-    RunningSum(current = 0D, Vector.empty, leftover = period)
+    RunningSum(sum = 0D, sumSquared = 0D, Vector.empty, leftover = period)
 
-  case class RunningSum(current: Double, history: Vector[Double], leftover: Int):
+  case class RunningSum(sum: Double, sumSquared: Double, history: Vector[Double], leftover: Int):
     def addPoints[T](items: Seq[T] = Nil)(extractor: T => Double): RunningSum =
       items.map(extractor).foldLeft(this)(_ addNewDataPoint _)
 
     def addNewDataPoint(dataPoint: Double): RunningSum =
-      if leftover > 0 then RunningSum(current + dataPoint, history :+ dataPoint, leftover = leftover - 1)
-      else RunningSum(current - history.head + dataPoint, history.tail :+ dataPoint, leftover = 0)
+      if leftover > 0 then RunningSum(sum + dataPoint, sumSquared + math.pow(dataPoint, 2), history :+ dataPoint, leftover = leftover - 1)
+      else RunningSum(sum - history.head + dataPoint, sumSquared - math.pow(history.head, 2) + math.pow(dataPoint, 2), history.tail :+ dataPoint, leftover = 0)
+
+    lazy val mean: Double = sum / history.size
+
+    lazy val variance: Double = sumSquared / history.size - math.pow(mean, 2)
