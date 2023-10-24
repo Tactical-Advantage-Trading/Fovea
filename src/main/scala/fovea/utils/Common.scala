@@ -60,11 +60,20 @@ object Common:
   // Represents a series of feature observations and a followup value
   case class SerialObservations(features: Array[Features], value: Double)
 
-  def featuresToNDArray(features: List[SerialObservations], targetShape: Shape, manager: NDManager): (NDArray, NDArray) =
-    val (splitFeatures, splitValues) = Random.shuffle(features).map(container => container.features.flatten -> container.value).unzip
-    val finalFeatures = manager.create(splitFeatures.toArray).reshape(targetShape).toType(DataType.FLOAT32, false)
-    val finalValues = manager.create(splitValues.toArray).toType(DataType.FLOAT32, false)
-    (finalFeatures, finalValues)
+  def featuresToNDArray(features: List[SerialObservations], targetShape: Shape, manager: NDManager, groups: Int): (NDArray, NDArray) =
+    // Process total data in a number of chunks since DoubleBuffer has a hardcoded max limit which can easily fall below observation size
+    var featureNDArrays: Vector[NDArray] = Vector.empty
+    var valueNDArrays: Vector[NDArray] = Vector.empty
+
+    Random.shuffle(features).grouped(features.size / groups).foreach { chunk =>
+      val (splitFeatures, splitValues) = chunk.map(container => container.features.flatten -> container.value).unzip
+      featureNDArrays :+= manager.create(splitFeatures.toArray).reshape(targetShape).toType(DataType.FLOAT32, false)
+      valueNDArrays :+= manager.create(splitValues.toArray).toType(DataType.FLOAT32, false)
+    }
+
+    val concatenatedFeatures = featureNDArrays.tail.foldLeft(featureNDArrays.head)(_ concat _)
+    val concatenatedValues = valueNDArrays.tail.foldLeft(valueNDArrays.head)(_ concat _)
+    (concatenatedFeatures, concatenatedValues)
 
   def logBase(x: Double, base: Int): Double =
     math.log10(x) / math.log10(base)

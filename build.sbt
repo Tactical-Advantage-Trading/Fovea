@@ -27,15 +27,3 @@ libraryDependencies += "ai.djl.pytorch" % "pytorch-jni" % "1.13.1-0.21.0"
 libraryDependencies += "ai.djl.pytorch" % "pytorch-native-cu117" % "1.13.1"
 
 libraryDependencies += "tech.tablesaw" % "tablesaw-jsplot" % "0.43.1"
-
-// Assembly
-
-val workaround: Unit = {
-  sys.props += "packaging.type" -> "jar"
-}
-
-ThisBuild / assembly / assemblyMergeStrategy := {
-  case n if n.contains("djl") => MergeStrategy.first
-  case n if n.startsWith("META-INF") => MergeStrategy.discard
-  case _ => MergeStrategy.first
-}
