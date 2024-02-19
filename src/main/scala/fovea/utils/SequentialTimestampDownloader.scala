@@ -10,17 +10,25 @@ abstract class SequentialTimestampDownloader[T](ops: SequentialTimestampFileOps[
 
   def log(message: String): Unit
 
-  def skipExistingDownload(fromMsecs: Long): Unit = 
-    log(s"Downloading $fromMsecs unless it exists already")
+  def skipExistingDownload(fromMsecs: Long, remains: Int): Unit =
+    log(s"Downloading $fromMsecs unless it exists already, $remains")
     val file = new File(ops.saveDir.getAbsolutePath + "/" + fromMsecs)
-    if file.exists then skipExistingDownload(fromMsecs + stepMsecs) else download(fromMsecs)
+    if (file.exists) skipExistingDownload(fromMsecs + stepMsecs, remains)
+    else download(fromMsecs, remains)
 
-  def download(fromMsecs: Long): Unit = 
+  def download(fromMsecs: Long, remains: Int): Unit =
     val nextTimeSpan = fromMsecs + stepMsecs
-    log(s"Downloading $fromMsecs - $nextTimeSpan")
-    val batch = downloadBatch(fromMsecs, nextTimeSpan)
-    if batch.isEmpty then log("Download complete") else {
-      ops.persist(ops.encode(batch), fromMsecs)
-      log(s"Downloaded ${batch.size} items")
-      download(nextTimeSpan)
-    }
+    log(s"$fromMsecs - $nextTimeSpan")
+
+    downloadBatch(fromMsecs, nextTimeSpan) match
+      case Nil if remains <= 0 =>
+        log("Download complete")
+
+      case Nil =>
+        log(s"Skipped empty result, remains=$remains")
+        skipExistingDownload(nextTimeSpan, remains - 1)
+
+      case batch =>
+        log(s"Downloaded ${batch.size} items")
+        ops.persist(ops.encode(batch), fromMsecs)
+        download(nextTimeSpan, remains)
