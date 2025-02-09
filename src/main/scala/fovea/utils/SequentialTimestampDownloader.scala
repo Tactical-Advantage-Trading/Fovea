@@ -1,22 +1,18 @@
 package fovea.utils
 
-import java.io.File
+import scala.annotation.tailrec
 
 
+// Downloads data by time chunks, skips existing chunks, skips empty download results up to reserve retries
 abstract class SequentialTimestampDownloader[T](ops: SequentialTimestampFileOps[T], stepMsecs: Long):
-  // Used for chunked fetching of raw data from a possibly remote source
-  
   def downloadBatch(fromMsecs: Long, toMsecs: Long): List[T]
-
   def log(message: String): Unit
 
-  def skipExistingDownload(fromMsecs: Long, remains: Int): Unit =
-    log(s"Downloading $fromMsecs unless it exists already, $remains")
-    val file = new File(ops.saveDir.getAbsolutePath + "/" + fromMsecs)
-    if (file.exists) skipExistingDownload(fromMsecs + stepMsecs, remains)
-    else download(fromMsecs, remains)
+  def skipExistingDownload(fromMsecs: Long, reserve: Int): Unit =
+    skipExisting(fromMsecs, reserve, reserve)
 
-  def download(fromMsecs: Long, remains: Int): Unit =
+  @tailrec
+  private def downloadInternal(fromMsecs: Long, remains: Int, reserve: Int): Unit =
     val nextTimeSpan = fromMsecs + stepMsecs
     log(s"$fromMsecs - $nextTimeSpan")
 
@@ -26,9 +22,16 @@ abstract class SequentialTimestampDownloader[T](ops: SequentialTimestampFileOps[
 
       case Nil =>
         log(s"Skipped empty result, remains=$remains")
-        skipExistingDownload(nextTimeSpan, remains - 1)
+        skipExisting(nextTimeSpan, remains - 1, reserve)
 
       case batch =>
         log(s"Downloaded ${batch.size} items")
         ops.persist(ops.encode(batch), fromMsecs)
-        download(nextTimeSpan, remains)
+        downloadInternal(nextTimeSpan, reserve, reserve)
+
+  @tailrec
+  private def skipExisting(fromMsecs: Long, remains: Int, reserve: Int): Unit =
+    log(s"Downloading $fromMsecs unless it exists already, $remains")
+    val file = new java.io.File(ops.saveDir.getAbsolutePath + "/" + fromMsecs)
+    if file.exists then skipExisting(fromMsecs + stepMsecs, remains, reserve)
+    else downloadInternal(fromMsecs, remains, reserve)
