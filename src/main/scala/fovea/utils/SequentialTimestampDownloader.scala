@@ -31,7 +31,7 @@ abstract class SequentialTimestampDownloader[T](ops: SequentialTimestampFileOps[
 
   @tailrec
   private def skipExisting(fromMsecs: Long, remains: Int, reserve: Int): Unit =
-    log(s"Downloading $fromMsecs unless it exists already, $remains")
+    log(s"Downloading $fromMsecs unless it exists already, retries=$remains/$reserve")
     val file = new java.io.File(ops.saveDir.getAbsolutePath + "/" + fromMsecs)
     if file.exists then skipExisting(fromMsecs + stepMsecs, remains, reserve)
     else downloadInternal(fromMsecs, remains, reserve)
