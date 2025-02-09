@@ -7,7 +7,7 @@ object EntropyRate:
   final val alphabet: Message = Vector('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J')
 
   def longestMatchLength(msg: Message, startIdx: Int, window: Int): LazyList[Int] =
-    require(startIdx >= window, s"startIdx=$startIdx must be >= than window=$startIdx")
+    require(startIdx >= window, s"startIdx=$startIdx must be >= than window=$window")
     require(msg.size >= startIdx + window, s"Message length must be >= startIdx + window")
 
     for
