@@ -5,9 +5,9 @@ import ai.djl.ndarray.{NDList, NDManager}
 import ai.djl.nn.*
 import ai.djl.nn.core.Linear
 import ai.djl.nn.norm.Dropout
-import ai.djl.nn.transformer.TransformerEncoderBlock
 import ai.djl.training.ParameterStore
 import fovea.encoding.PositionalEncoding
+import fovea.transformer.TransformerEncoderBlock
 import fovea.utils.Common.{ParamsList, ShapeArray}
 
 
